@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package tarefas;
+
+// Status possíveis de uma tarefa.
+// O valor 0 é obrigatório em proto3 e funciona como "não informado":
+// é o que você recebe quando o cliente simplesmente não preencheu o campo.
+enum Status {
+  STATUS_INDEFINIDO = 0;
+  STATUS_PENDENTE = 1;
+  STATUS_EM_ANDAMENTO = 2;
+  STATUS_CONCLUIDA = 3;
+  STATUS_CANCELADA = 4;
+}
+
+// A entidade central do sistema.
+// Os números (= 1, = 2, ...) são a identidade real de cada campo no formato
+// binário. Nomes podem mudar; números, nunca — se um número for reaproveitado
+// para outra finalidade, clientes antigos passam a ler lixo.
+message Tarefa {
+  string id = 1;                     // UUID gerado pelo servidor
+  string titulo = 2;
+  string descricao = 3;
+  Status status = 4;
+  string data_limite = 5;            // ISO-8601, ex.: "2026-10-15"
+  repeated string responsaveis = 6;  // "repeated" = lista
+  string criada_em = 7;              // preenchido pelo servidor
+  string atualizada_em = 8;          // preenchido pelo servidor
+}
+
+// --- Mensagens de requisição e resposta ---
+// Convenção do gRPC: cada método tem sua própria mensagem de entrada e de
+// saída, mesmo quando elas têm um campo só. Isso permite acrescentar campos
+// depois sem quebrar a assinatura do método.
+
+message CriarTarefaRequest {
+  string titulo = 1;
+  string descricao = 2;
+  Status status = 3;
+  string data_limite = 4;
+  repeated string responsaveis = 5;
+}
+
+message CriarTarefaResponse {
+  Tarefa tarefa = 1;
+}
+
+message ListarTarefasRequest {
+  // STATUS_INDEFINIDO (0) significa "sem filtro, traga todas".
+  Status filtro_status = 1;
+}
+
+message ListarTarefasResponse {
+  repeated Tarefa tarefas = 1;
+  int32 total = 2;
+}
+
+message AtualizarTarefaRequest {
+  // A tarefa precisa vir com o id preenchido; os demais campos substituem
+  // os valores atuais.
+  Tarefa tarefa = 1;
+}
+
+message AtualizarTarefaResponse {
+  Tarefa tarefa = 1;
+}
+
+message DeletarTarefaRequest {
+  string id = 1;
+}
+
+message DeletarTarefaResponse {
+  bool removida = 1;
+  string id = 2;
+}
+
+// --- O serviço ---
+// Cada rpc vira um método no stub do cliente e um método na classe base
+// do servidor.
+service GerenciadorTarefas {
+  rpc CriarTarefa(CriarTarefaRequest) returns (CriarTarefaResponse);
+  rpc ListarTarefas(ListarTarefasRequest) returns (ListarTarefasResponse);
+  rpc AtualizarTarefa(AtualizarTarefaRequest) returns (AtualizarTarefaResponse);
+  rpc DeletarTarefa(DeletarTarefaRequest) returns (DeletarTarefaResponse);
+
+  // Versão em server streaming da listagem. Mesma informação, entregue
+  // uma tarefa por vez em vez de tudo de uma vez. Bom material para a
+  // apresentação: mostra algo que REST tradicional não faz naturalmente.
+  rpc AcompanharTarefas(ListarTarefasRequest) returns (stream Tarefa);
+}

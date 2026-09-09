@@ -1,0 +1,39 @@
+services:
+  servidor:
+    build: .
+    container_name: tarefas-servidor
+    command: python servidor.py --porta 50051
+    volumes:
+      - ./dados:/app/dados
+    ports:
+      - "50051:50051"     # expõe também no host, útil para testar sem Docker
+    networks:
+      rede_tarefas:
+        ipv4_address: 172.28.0.10
+
+  cliente1:
+    build: .
+    container_name: tarefas-cliente1
+    command: sleep infinity   # o container fica de pé; você entra nele e roda o cliente
+    networks:
+      rede_tarefas:
+        ipv4_address: 172.28.0.21
+    depends_on:
+      - servidor
+
+  cliente2:
+    build: .
+    container_name: tarefas-cliente2
+    command: sleep infinity
+    networks:
+      rede_tarefas:
+        ipv4_address: 172.28.0.22
+    depends_on:
+      - servidor
+
+networks:
+  rede_tarefas:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
