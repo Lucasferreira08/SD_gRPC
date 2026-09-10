@@ -1,0 +1,12 @@
+{
+  "id": "e03f2bc4-5946-4923-a79c-044df4c8e064",
+  "titulo": "ola",
+  "descricao": "teste",
+  "status": "STATUS_PENDENTE",
+  "dataLimite": "2026-02-31",
+  "responsaveis": [
+    "rafael"
+  ],
+  "criadaEm": "2026-09-10T01:36:15+00:00",
+  "atualizadaEm": "2026-09-10T01:36:15+00:00"
+}

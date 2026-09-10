@@ -84,7 +84,24 @@ python cliente.py --servidor IP:PORTA listar [--status ...]
 python cliente.py --servidor IP:PORTA atualizar --id UUID [--titulo ...] [--status ...]
 python cliente.py --servidor IP:PORTA deletar --id UUID
 python cliente.py --servidor IP:PORTA acompanhar     # server streaming
+python cliente.py --servidor IP:PORTA menu           # interface interativa
 ```
+
+### Menu interativo
+
+Para não precisar decorar os argumentos durante a demonstração, execute:
+
+```bash
+python cliente.py
+```
+
+Também é possível usar `python cliente.py menu` explicitamente.
+
+O menu guia a criação, listagem, atualização, exclusão e o streaming de
+tarefas. Ele mostra as opções de status numeradas e valida a data limite no
+formato `AAAA-MM-DD`, incluindo datas inexistentes ou passadas. Os comandos
+documentados acima continuam disponíveis para uso em scripts ou diretamente
+no terminal.
 
 ## Roteiro sugerido para a apresentação (10 a 15 min)
 
