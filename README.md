@@ -4,6 +4,8 @@ Sistema cliente-servidor em Python. O servidor guarda cada tarefa em um
 arquivo JSON separado; a comunicação é feita por gRPC sobre HTTP/2, com as
 mensagens definidas em `tarefas.proto`.
 
+Grupo: Pedro Lucas, Gerson, Rafael Emanuel e Yago
+
 ## Arquivos
 
 | Arquivo | Papel |
@@ -16,19 +18,45 @@ mensagens definidas em `tarefas.proto`.
 
 ## Rodando sem Docker (desenvolvimento)
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+Requer **Python 3.12**. Os pinos do `requirements.txt` (`grpcio` e
+`grpcio-tools` 1.66.1) publicam wheels só até `cp312`; no Python 3.13 o pip
+tenta compilar do fonte e falha. Para usar 3.13, suba os dois para `1.66.2`,
+a primeira versão com wheel `cp313` — o `protobuf==5.27.2` é `abi3` e serve
+nos dois casos.
 
-# gera tarefas_pb2.py e tarefas_pb2_grpc.py
-python -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. tarefas.proto
+Criação do ambiente no Windows (PowerShell):
 
-python servidor.py            # terminal 1
-python cliente.py listar      # terminal 2
+```powershell
+py -3.12 -m venv .venv
+.venv\Scripts\Activate.ps1
 ```
 
+No Linux ou macOS:
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+```
+
+Com o ambiente ativado, o resto é igual nos dois:
+
+```bash
+pip install -r requirements.txt
+
+# gera tarefas_pb2.py, tarefas_pb2.pyi e tarefas_pb2_grpc.py
+python -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. tarefas.proto
+
+python servidor.py            # terminal 1, ouve em 0.0.0.0:50051
+python cliente.py listar      # terminal 2, fala com localhost:50051
+```
+
+Os dois terminais precisam estar com o venv ativado. O servidor aceita
+`--porta` e `--dados`; esta última também pode vir da variável de ambiente
+`PASTA_DADOS`, que é como o `Dockerfile` aponta para `/app/dados`.
+
 Refaça a geração dos stubs toda vez que o `.proto` mudar. Os arquivos
-`*_pb2*.py` são artefatos de build e normalmente não vão para o repositório.
+`*_pb2*.py` são artefatos de build e estão no `.gitignore`, junto com a
+`.venv/` e a pasta `dados/`.
 
 ## Rodando com Docker (demonstração da Obs 2)
 
@@ -52,11 +80,7 @@ Abra dois terminais e entre em um cliente em cada um:
 docker compose exec cliente1 bash
 hostname -i    # mostra 172.28.0.21
 
-python cliente.py --servidor 172.28.0.10:50051 criar \
-  --titulo "Escrever o arquivo .proto" \
-  --descricao "Definir mensagens e o bloco service" \
-  --data-limite 2026-09-20 \
-  --responsavel ana --responsavel bruno
+python cliente.py --servidor 172.28.0.10:50051 menu
 ```
 
 ```bash
@@ -64,8 +88,14 @@ python cliente.py --servidor 172.28.0.10:50051 criar \
 docker compose exec cliente2 bash
 hostname -i    # mostra 172.28.0.22
 
-python cliente.py --servidor 172.28.0.10:50051 listar
+python cliente.py --servidor 172.28.0.10:50051 menu
 ```
+
+Dentro dos containers o `--servidor` é **obrigatório**. O padrão do cliente é
+`localhost:50051`, e dentro do `cliente1` isso aponta para o próprio
+`cliente1`, que só roda `sleep infinity` — o resultado é
+`UNAVAILABLE: Connection refused`. Em vez do IP, também funciona o nome do
+serviço, que o DNS interno do Compose resolve: `--servidor servidor:50051`.
 
 O cliente 2 enxerga a tarefa criada pelo cliente 1 — é a prova de que o
 estado vive no servidor. Deixe um terceiro terminal com
@@ -87,6 +117,10 @@ python cliente.py --servidor IP:PORTA acompanhar     # server streaming
 python cliente.py --servidor IP:PORTA menu           # interface interativa
 ```
 
+O `--servidor` pertence ao parser principal, não ao subcomando, então ele vem
+sempre **antes** de `criar`, `listar`, `menu` e companhia. Escrito na outra
+ordem, `python cliente.py menu --servidor ...`, o argparse rejeita.
+
 ### Menu interativo
 
 Para não precisar decorar os argumentos durante a demonstração, execute:
@@ -95,60 +129,13 @@ Para não precisar decorar os argumentos durante a demonstração, execute:
 python cliente.py
 ```
 
-Também é possível usar `python cliente.py menu` explicitamente.
+Sem subcomando o cliente abre o menu; `python cliente.py menu` faz o mesmo
+explicitamente. As duas formas usam o servidor padrão `localhost:50051`, o que
+só serve rodando na máquina host — dentro de um container, acrescente o
+`--servidor` como mostrado acima.
 
 O menu guia a criação, listagem, atualização, exclusão e o streaming de
 tarefas. Ele mostra as opções de status numeradas e valida a data limite no
 formato `AAAA-MM-DD`, incluindo datas inexistentes ou passadas. Os comandos
 documentados acima continuam disponíveis para uso em scripts ou diretamente
 no terminal.
-
-## Roteiro sugerido para a apresentação (10 a 15 min)
-
-1. **O `.proto` e a compilação** (3 min). Mostre o arquivo, aponte os números
-   dos campos e explique que eles, não os nomes, são a identidade no formato
-   binário. Rode o `protoc` ao vivo e abra o `tarefas_pb2_grpc.py` gerado para
-   mostrar o `GerenciadorTarefasStub` e o `GerenciadorTarefasServicer`.
-
-2. **Servidor e cliente** (4 min). No servidor, mostre a classe
-   `ServicoTarefas` herdando da classe gerada e o uso de
-   `context.abort(grpc.StatusCode.NOT_FOUND, ...)`. No cliente, mostre as duas
-   linhas que constroem canal e stub, e destaque que o resto do código chama
-   os métodos como se fossem locais.
-
-3. **Demonstração distribuída** (4 min). Os três containers, os IPs distintos,
-   um cliente criando e o outro listando. Termine com o comando `acompanhar`
-   para mostrar o server streaming.
-
-4. **Protobuf comparado a JSON** (3 min). Argumentos a usar:
-   - o contrato é compilado, não documentado: erro de tipo aparece antes de
-     rodar, não em produção;
-   - serialização binária com campos identificados por número reduz o tamanho
-     da mensagem e elimina o custo de interpretar texto;
-   - evolução de esquema: acrescentar um campo novo não quebra clientes
-     antigos, que ignoram o número desconhecido;
-   - HTTP/2 dá multiplexação e streaming nativo;
-   - o custo: não é legível por humanos e exige ferramenta específica
-     (`grpcurl`) para inspecionar o tráfego.
-
-   Para uma medida concreta, compare os tamanhos ao vivo:
-
-   ```python
-   import json
-   from google.protobuf import json_format
-   import tarefas_pb2
-
-   t = tarefas_pb2.Tarefa(id="8f2b...", titulo="Escrever o .proto",
-                          status=tarefas_pb2.STATUS_PENDENTE)
-   binario = t.SerializeToString()
-   texto = json_format.MessageToJson(t).encode()
-   print(len(binario), len(texto))
-   ```
-
-## Ideias para ir além, se sobrar tempo
-
-- Trocar `insecure_channel` por TLS com `grpc.ssl_channel_credentials()`.
-- Um interceptor no servidor para registrar latência de cada chamada.
-- Usar `google.protobuf.Timestamp` no lugar das datas como string.
-- Um cliente em outra linguagem (Go ou Node) a partir do mesmo `.proto`, o que
-  demonstra bem o valor da IDL.

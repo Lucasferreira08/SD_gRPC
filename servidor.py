@@ -40,8 +40,6 @@ class RepositorioArquivos:
         return os.path.join(self.pasta, f"{id_tarefa}.json")
 
     def salvar(self, tarefa):
-        # MessageToJson converte a mensagem Protobuf em JSON. Aqui isso é só
-        # conveniência de armazenamento: na rede, o que trafega é binário.
         texto = json_format.MessageToJson(tarefa, ensure_ascii=False)
         with self._lock:
             with open(self._caminho(tarefa.id), "w", encoding="utf-8") as f:
@@ -120,7 +118,6 @@ class ServicoTarefas(tarefas_pb2_grpc.GerenciadorTarefasServicer):
         if atual is None:
             context.abort(grpc.StatusCode.NOT_FOUND, f"tarefa {nova.id} não existe")
 
-        # Só sobrescreve o que veio preenchido, preservando o resto.
         if nova.titulo:
             atual.titulo = nova.titulo
         if nova.descricao:
@@ -162,7 +159,7 @@ class ServicoTarefas(tarefas_pb2_grpc.GerenciadorTarefasServicer):
             ):
                 continue
             yield tarefa
-            time.sleep(0.3)  # só para o streaming ficar visível na demonstração
+            time.sleep(0.3)
 
 
 def main():
@@ -175,8 +172,6 @@ def main():
     tarefas_pb2_grpc.add_GerenciadorTarefasServicer_to_server(
         ServicoTarefas(RepositorioArquivos(args.dados)), servidor
     )
-    # insecure = sem TLS. Suficiente para a atividade; em produção usaria
-    # add_secure_port com credenciais.
     servidor.add_insecure_port(f"0.0.0.0:{args.porta}")
     servidor.start()
     print(f"servidor ouvindo em 0.0.0.0:{args.porta} | dados em {args.dados}/", flush=True)

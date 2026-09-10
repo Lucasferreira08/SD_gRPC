@@ -1,0 +1,24 @@
+# Ambiente virtual. Não é relocável: o pyvenv.cfg e os executáveis de
+# Scripts/ gravam o caminho absoluto da máquina onde foi criado.
+.venv/
+venv/
+env/
+
+# Bytecode do Python
+__pycache__/
+*.py[cod]
+
+# Stubs gerados pelo protoc a partir do tarefas.proto. Recrie com o comando
+# documentado no README; no Docker o próprio Dockerfile já faz isso.
+*_pb2.py
+*_pb2.pyi
+*_pb2_grpc.py
+
+# Dados de execução: um JSON por tarefa. O servidor recria a pasta ao subir.
+dados/
+
+# Editores e sistema
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

@@ -280,8 +280,6 @@ def executar(stub, args):
 
     elif args.comando == "acompanhar":
         filtro = STATUS_POR_NOME.get(args.status, tarefas_pb2.STATUS_INDEFINIDO)
-        # A resposta é um iterador: cada volta do for é uma mensagem que
-        # acabou de chegar pela rede.
         for tarefa in stub.AcompanharTarefas(
             tarefas_pb2.ListarTarefasRequest(filtro_status=filtro)
         ):
@@ -291,12 +289,8 @@ def executar(stub, args):
 
 def main():
     args = montar_parser().parse_args()
-    # Sem subcomando, abre a interface guiada. Os subcomandos continuam
-    # disponíveis para automação e para os exemplos da documentação.
     if args.comando is None:
         args.comando = "menu"
-    # O canal é a conexão HTTP/2 com o servidor. O stub é o objeto que
-    # expõe os métodos do .proto como se fossem funções locais.
     with grpc.insecure_channel(args.servidor) as canal:
         stub = tarefas_pb2_grpc.GerenciadorTarefasStub(canal)
         try:
